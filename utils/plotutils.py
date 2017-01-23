@@ -10,6 +10,7 @@ Outputs:
 Args:
   data: np.ndarray
 """
+
 def pad_data(data):
     n = int(np.ceil(np.sqrt(data.shape[0])))
     padding = (((0, n ** 2 - data.shape[0]),
