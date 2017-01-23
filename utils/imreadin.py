@@ -35,7 +35,7 @@ class vanHateren:
                 full_img_data = full_img_data/np.std(full_img_data,axis=(1,2),keepdims=True)
             if patch_edge_size is not None:
                 print('sectioning into patches....')
-                print(full_img_data.shape)
+                #print(full_img_data.shape)
                 (num_img, num_px_rows, num_px_cols) = full_img_data.shape
                 num_img_px = num_px_rows * num_px_cols
                 #print(num_px_rows)
@@ -44,11 +44,11 @@ class vanHateren:
                 assert (num_px_rows % patch_edge_size == 0)  , ("The number of image row edge pixels % the patch edge size must be 0.")
                 assert (num_px_cols % patch_edge_size == 0)  , ("The number of image column edge pixels % the patch edge size must be 0.")
                 self.num_patches = int(num_img_px / patch_edge_size**2)
-                full_img_data = np.reshape(full_img_data, (num_img, num_img_px))
+                #full_img_data = np.reshape(full_img_data, (num_img, num_img_px))
                 #data = np.vstack([full_img_data[idx,...].reshape(self.num_patches, patch_edge_size, patch_edge_size) for idx in range(num_img)])
                 data = np.asarray(np.split(full_img_data, num_px_cols/patch_edge_size,2)) # tile column-wise
                 data = np.asarray(np.split(data, num_px_rows/patch_edge_size,2)) #tile row-wise
-                data = np.reshape(np.transpose(data,(3,4,0,1,2)),(patch_edge_size,patch_edge_size,-1)) #stack tiles together
+                data = np.transpose(np.reshape(np.transpose(data,(3,4,0,1,2)),(patch_edge_size,patch_edge_size,-1)),(2,0,1)) #stack tiles together
 
             else:
                 data = full_img_data
