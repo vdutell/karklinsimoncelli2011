@@ -2,6 +2,7 @@ import os
 import tensorflow as tf
 import numpy as np
 import shutil
+import utils.tensorutils as tu
 
 class mi_model(object):
     
@@ -66,20 +67,20 @@ class mi_model(object):
                 
             #Correlation matrices
             with tf.name_scope('corr_mats'):
-                self.cx = tf.to_float(tf.constant(self.params['cx']))
+                self.cx = tf.expand_dims(tf.constant(self.params['cx']),0)
                 #self.cxbatch = tf.expand_dims(self.cx,0)
                 #self.cxbatch = tf.tile(self.cx, self.nbatches)
                 #self.cxbatch = tf.reshape(self.cxbatch,(self.params['batchsize'],tf.shape(self.cxbatch)[0]))
 
                 self.cx_i = tf.matrix_inverse(self.cx)
                 
-                self.cnx = tf.to_float(tf.constant(np.eye(self.params['patchsize']**2) * self.noisexsigma**2))
+                self.cnx = tf.expand_dims(tf.to_float(tf.constant(np.eye(self.params['patchsize']**2) * self.noisexsigma**2)),0)
                 #self.cnxbatch = self.cnx
                 #self.cnxbatch = tf.expand_dims(self.cnx,0)
                 #self.cnxbatch = tf.tile(self.cnx, self.nbatches)
                 #self.cnxbatch = tf.reshape(self.cnxbatch,(self.params['batchsize'],tf.shape(self.cnx)[0]))
                 
-                self.cnr = tf.to_float(tf.constant(np.eye(self.params['nneurons']) * self.noisersigma**2))
+                self.cnr = tf.cast( tf.expand_dims(tf.constant(np.eye(self.params['nneurons']) * self.noisersigma**2),0),tf.float32)
                 #self.cnrbatch = tf.tile(self.cnr, self.nbatches)
                 #self.cnrbatch = tf.reshape(self.cnrbatch,(self.params['batchsize'],tf.shape(self.cnr)[0]))
                                        
@@ -144,21 +145,27 @@ class mi_model(object):
                 
             with tf.name_scope("G"):
                 self.slopes = tf.expand_dims(tf.map_fn(ddxsigmoid,self.activation),-1)
-                self.eyes = tf.expand_dims(tf.eye(self.params['nneurons']),0) 
-                self.G = tf.multiply(self.eyes, self.slopes)
-                #self.G = tf.reshape(self.G, [-1, self.params['nneurons'], self.params['nneurons']])
-                #self.G = tf.tile(self.G, self.nbatches)
-                #I'm not confident this reshape is doing what I want
-                #self.G = tf.reshape(self.G,(self.params['batchsize'],tf.shape(self.G)[0]))
-                #self.G = self.G@self.slopes
+                self.G = tf.expand_dims(tf.to_float(tf.eye(self.params['nneurons'])),0) 
+                self.G = tf.multiply(self.G, self.slopes)
+                
+            with tf.name_scope("crx"):
+                self.crx = broadcast_matmul(self.G, tf.transpose(self.w))
+                self.crx = broadcast_matmul(self.crx, self.cnx)
+                self.crx = broadcast_matmul(self.crx, self.w)
+                self.crx = broadcast_matmul(self.crx, self.G)
+                self.crx = self.crx + self.cnr 
+                self.crx_i = tf.matrix_inverse(self.crx)
+                
+            with tf.name_scope("cxr"):                
+                self.cxr = broadcast_matmul(self.w, self.G)
+                self.cxr = self.cxr @ self.crx_i
+                self.cxr = self.cxr @ self.G 
+                self.cxr = broadcast_matmul(self.cxr, tf.transpose(self.w))
+                self.cxr = self.cx_i + self.cxr
                 
             #mut info calc part of model
             with tf.name_scope("mut_info_calc"):
-                
-                self.crx = broadcast_matmul(self.G, tf.transpose(self.w) )
-                self.crx = self.crx @ self.cnx @ self.w @ self.G + self.cnr 
-                self.crx_i = tf.matrix_inverse(self.crx)
-                self.cxr = (self.cx_i + self.w @ self.G @ self.crx_i @ self.G @ tf.transpose(self.w))
+           
                 self.Hxr = 0.5*tf.log(2*np.pi*np.e*tf.matrix_determinant(self.cxr))
 
             #calculate cost
@@ -177,10 +184,9 @@ class mi_model(object):
             with tf.name_scope('cost_viz'):
                 tf.summary.scalar("cost", self.cost)
 
-            with tf.name_scope('image_viz'):    
-                x_t = tf.reshape(self.x,(np.shape(self.x)[0],self.params['imxlen'],self.params['imylen'],1))
+            with tf.name_scope('image_viz'):
+                x_t = tu.tsr_vecs2ims(self.x,self.params['patchsize'])
                 tf.summary.image("image", x_t, max_outputs=self.params['batchsize'])
-
 
             with tf.name_scope('weights_viz'):    
                 inwin_t = tf.reshape(tf.transpose(self.w),
