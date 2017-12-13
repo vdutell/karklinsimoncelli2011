@@ -81,9 +81,9 @@ class mi_model(object):
                 
                 #cnx
                 #self.cnx = np.float32(np.corrcoef(self.in_noise,rowvar=False))
-                
-                mean_cnx = tf.reduce_mean(self.in_noise, axis=1, keep_dims=True)
-                cov_cnx = ((self.in_noise-mean_cnx) @ tf.transpose(self.in_noise-mean_cnx))/(self.params["imxlen"]**2-1)
+                cnx_t = tf.transpose(self.in_noise)
+                mean_cnx = tf.reduce_mean(cnx_t, axis=1, keep_dims=True)
+                cov_cnx = ((cnx_t-mean_cnx) @ tf.transpose(cnx_t-mean_cnx))/(self.params["imxlen"]**2-1)
                 cov2_cnx = tf.diag(1/tf.sqrt(tf.diag_part(cov_cnx)))
                 self.cnx = cov2_cnx @ cov_cnx @ cov2_cnx
 
@@ -145,8 +145,9 @@ class mi_model(object):
                 
             with tf.name_scope("out_corr_mat"):
                 #cnr
-                mean_cnr = tf.reduce_mean(self.out_noise, axis=1, keep_dims=True)
-                cov_cnr = ((self.out_noise-mean_cnr) @ tf.transpose(self.out_noise-mean_cnr))/(self.params["nneurons"]-1)
+                cnr_t = tf.transpose(self.out_noise)
+                mean_cnr = tf.reduce_mean(cnr_t, axis=1, keep_dims=True)
+                cov_cnr = ((cnr_t-mean_cnr) @ tf.transpose(cnr_t-mean_cnr))/(self.params["nneurons"]-1)
                 cov2_cnr = tf.diag(1/tf.sqrt(tf.diag_part(cov_cnr)))
                 self.cnr = cov2_cnr @ cov_cnr @ cov2_cnr
                 #self.cnr = np.float32(np.corrcoef(self.out_noise,rowvar=False))
