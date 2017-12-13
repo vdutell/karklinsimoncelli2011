@@ -40,6 +40,8 @@ def train_model(mim,vhimgs):
                 #print('Epoch {}: '.format(epoch+1))
                 np.random.shuffle(vhimgs)
                 for ii in range(mim.params['iterations']):
+                    
+                    print('*')
 
                     #reshape our images for feeding to dict
                     image = np.reshape(vhimgs[ii*mim.params['batchsize']:(1+ii)*mim.params['batchsize'],:,:],
