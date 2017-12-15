@@ -342,63 +342,29 @@ def save_plots(model,
                cost_evolution,
                wmean_evolution,
                inweights_evolution,
-               outweights_evolution,
                activation_evolution,
                inbias_evolution,
-               weights_kernel_in_ordered,
-               test_patches,
-               test_recons,
-               test_inweights_ordered,
-               test_outweights_ordered,
-               test_acts_ordered):
+               weights_ordered):
     
      
     savefolder = model.params['savefolder']
   
     ## trained in weights
-    fiw = test_inweights_ordered.reshape(model.params['imxlen'],
+    fiw = weights_ordered.reshape(model.params['imxlen'],
                                   model.params['imylen'],
                                   model.params['nneurons']).T
     
-    ## initial weights
-    iw = weights_kernel_in_ordered.reshape(model.params['imxlen'],
-                                     model.params['imylen'],
-                                     model.params['nneurons']).T
-    
-    ## trained out weights
-    fow = test_outweights_ordered.reshape(model.params['imxlen'],
-                                  model.params['imylen'],
-                                  model.params['nneurons']).T
-    
-    (f,sa,ai) = display_data_acts_tiled(fiw, np.mean(test_acts_ordered,axis=0), normalize=True, title="final_in_weights");
-    f.savefig(savefolder+'trained_weights_in.png')
-    plt.close()    
-    
-
-    (f,sa,ai) = display_data_acts_tiled(fow, np.mean(test_acts_ordered,axis=0), normalize=True, title="final_out_weights");
-    
-    f.savefig(savefolder+'trained_weights_out.png')
-    plt.close()
-   
+       
     #save evolving weights
-    inweights_evolution_r = np.rollaxis(np.reshape(inweights_evolution,
-                                         (len(inweights_evolution),
+    weights_evolution_r = np.rollaxis(np.reshape(weights_evolution,
+                                         (len(iweights_evolution),
                                           model.params['imxlen'],
                                           model.params['imylen'],
                                           model.params['nneurons'])),3,1)
-    outweights_evolution_r = np.reshape(outweights_evolution,
-                                         (len(outweights_evolution),
-                                          model.params['nneurons'],
-                                          model.params['imxlen'],
-                                          model.params['imylen'])) #no rollaxis needed b/c shape is already nnuerons in pos 1.    
   
-    for i in range(len(inweights_evolution_r)):
-        (f,sa,ai) = display_data_acts_tiled(inweights_evolution_r[i], np.mean(test_acts_ordered,axis=0), normalize=True, title="inweights_evolving");
-        f.savefig(savefolder+'param_evolution/inweights_evolution_'+str(i)+'.png')
-        plt.close()
-        
-        (f,sa,ai) = display_data_acts_tiled(outweights_evolution_r[i],  np.mean(test_acts_ordered,axis=0), normalize=True, title="outweights_evolving");
-        f.savefig(savefolder+'param_evolution/outweights_evolution_'+str(i)+'.png')
+    for i in range(len(weights_evolution_r)):
+        (f,sa,ai) = display_data_acts_tiled(weights_evolution_r[i], np.mean(test_acts_ordered,axis=0), normalize=True, title="weights_evolving");
+        f.savefig(savefolder+'param_evolution/weights_evolution_'+str(i)+'.png')
         plt.close()
         
     #save plots of on and off tiling
@@ -406,11 +372,6 @@ def save_plots(model,
     f.savefig(savefolder+'/trained_in_on_off_RFs.png') 
     plt.close()
     
-    #save plot of trained activations of individual weights
-    f = test_activation_distributions(test_acts_ordered, onofflabels, norm=True)
-    plt.title('Trained Activations')
-    f.savefig(savefolder+'/trained_node_activations.png') 
-    plt.close()
     
     #save weights and cost evolution
     f = plt.figure(figsize=(10,10))
@@ -422,27 +383,6 @@ def save_plots(model,
     f.savefig(savefolder+'/summary_weights_cost.png') 
     plt.close()
     
-    #save reconstruction polots
-    
-    #show an example image and reconstruction from the last iteration of learning
-    patchnum = 3
-    plots = 4
-    
-    f = plt.figure()
-    for i in range(plots):
-        plt.subplot(plots,2,2*i+1)#,title='Patch')
-        plt.imshow(test_patches[patchnum+i,:],cmap='gray',interpolation='none')
-        plt.colorbar()
-        plt.axis('off')
-        plt.subplot(plots,2,2*i+2)#,title='Recon')
-        plt.imshow(test_recons[patchnum+i,:],cmap='gray',interpolation='none')
-        plt.colorbar()
-        plt.axis('off')
-    plt.tight_layout()
-    f.savefig(savefolder+'/reconstruction.png') 
-    plt.close() 
-    
-
     #save weight plots
     
     #trained weight distances

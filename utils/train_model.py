@@ -21,7 +21,7 @@ def train_model(mim,vhimgs):
             wmean_evolution = []
 
             inweights_evolution = []
-            inbias_evolution = []
+            bias_evolution = []
             activation_evolution = []
 
             activations = []
@@ -40,14 +40,10 @@ def train_model(mim,vhimgs):
                 #print('Epoch {}: '.format(epoch+1))
                 np.random.shuffle(vhimgs)
                 for ii in range(mim.params['iterations']):
-                    
-                    print('*')
-
                     #reshape our images for feeding to dict
-                    image = np.reshape(vhimgs[ii*mim.params['batchsize']:(1+ii)*mim.params['batchsize'],:,:],
-                                       (mim.params['batchsize'],
+                    image = np.reshape(vhimgs[ii*mim.params['batchsize']:(1+ii)*mim.params['batchsize'],:,:],(mim.params['batchsize'],
                                         mim.params['imxlen']*mim.params['imylen'])).astype(np.float32)
-
+                    image = image[:mim.params['subset']]
                     #setup params to send to dictionary
                     feeddict = {mim.x: image}
 
@@ -55,7 +51,8 @@ def train_model(mim,vhimgs):
                     sess.run(mim.train_step, feed_dict=feeddict)
 
                     #save evolution of params
-                    objcost, inws, acts = sess.run([mim.recon_err, mim.w, mim.activation], feed_dict=feeddict)  #mim.cost
+                    objcost, inws, acts = sess.run([mim.cost, mim.w, mim.activation], feed_dict=feeddict) 
+                    #mim.cost
                     cost_evolution.append(objcost)
                     wmean_evolution.append(np.mean(np.abs(inws)))
                     activations.append(np.mean(acts,axis=0))
@@ -64,10 +61,10 @@ def train_model(mim,vhimgs):
                     if(ii%(int((mim.params['iterations']*mim.params['epochs'])/10))==0):
                         print(str(ii)+', ',end="")
                         #dump our params
-                        w, img, recon, inbias, activation = sess.run([mim.w, mim.x, mim.xp, mim.inbias, mim.activation], feed_dict=feeddict)
+                        w, img, bias, activation =  sess.run([mim.w, mim.x, mim.bias, mim.activation], feed_dict=feeddict)
                         #save our weights, image, and reconstruction
                         inweights_evolution.append(w)
-                        inbias_evolution.append(inbias)
+                        bias_evolution.append(bias)
                         activation_evolution.append(activation)
                         
                         #reshape images and append
@@ -75,27 +72,35 @@ def train_model(mim,vhimgs):
                                    mim.params['imxlen'],
                                    mim.params['imylen']]   
                         images.append(np.reshape(img, imshape))
-                        
+                                   
+                    #show progress star
+                    print('*',end='')   
 
             #summarizeparams
             inweights_evolution = np.array(inweights_evolution)
+ 
             activation_evolution = np.mean(activation_evolution,axis=1)
-            
-            test_acts = activation_evolution[-1]
-        
-            #find order based on activations
-            order_test_acts = np.argsort(-np.mean(np.array(test_acts),axis=0))
 
+            #print(activation_evolution)
+            test_acts = activation_evolution[-1]            
+        
+            print(test_acts.shape)
+            
+            #find order based on activations
+            order_test_acts = np.argsort(test_acts)
+            
+            print(order_test_acts)
+            
             #reorder our data based on this ordering
-            weights_kernel_in_ordered = weights_kernel_in[:,order_test_acts] #reorder based on activations
-            test_inweights_ordered = test_w[:,order_test_acts] #reorder based on activations
-            test_outweights_ordered = test_wout.T[:,order_test_acts] #reorder based on activations
-            test_acts_ordered = test_acts[:,order_test_acts] #reorder based on activations
+            weights_ordered = w[:,order_test_acts] #reorder based on activations
+            #test_inweights_ordered = test_w[:,order_test_acts] #reorder based on activations
+            #test_outweights_ordered = test_wout.T[:,order_test_acts] #reorder based on activations
+            test_acts_ordered = test_acts[order_test_acts] #reorder based on activations
            
             
             #save summary
-            writer.add_summary(summary,ii)
-            writer.close()
+#             writer.add_summary(summary,ii)
+#             writer.close()
 
 
             return(mim,
@@ -103,8 +108,9 @@ def train_model(mim,vhimgs):
                    wmean_evolution,
                    inweights_evolution,
                    activation_evolution,
-                   inbias_evolution,
-                   weights_kernel_in_ordered,
-                   test_inweights_ordered,
-                   test_acts_ordered,
-                   test_acts)
+                   bias_evolution,
+                   weights_ordered,
+                   test_acts_ordered)
+                   #test_inweights_ordered,
+                   #test_acts_ordered,
+                   #test_acts)
